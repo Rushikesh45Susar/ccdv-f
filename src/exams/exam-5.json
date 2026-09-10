@@ -9,9 +9,9 @@
       "Chunk files into one agent sequentially, asking it to remember prior chunks"
     ],
     "correctAnswers": [
-      "Raise the context limit by streaming files as base64 attachments"
+      "Spawn subagents that each analyze a subset and return concise findings to an orchestrator"
     ],
-    "explanation": "Encoding format doesn't change token count; base64 typically inflates it."
+    "explanation": "Orchestrator-worker (subagent) patterns are the standard way to scale beyond a single context window. Each subagent processes its slice in an isolated context and returns compact findings, so only the summaries — not raw file contents — reach the orchestrator's context."
   },
   {
     "number": 2,
@@ -22,9 +22,9 @@
       "Increase max_tokens so the model can attend to more of the contract"
     ],
     "correctAnswers": [
-      "Increase max_tokens so the model can attend to more of the contract"
+      "Tell users to paste contracts in smaller pieces across multiple turns"
     ],
-    "explanation": "Long-context retrieval quality can degrade for mid-document content. Targeted retrieval places relevant text close to the question, improving grounding while also cutting tokens and cost — the standard mitigation for this failure mode."
+    "explanation": "This is the \"lost in the middle\" failure mode: attention degrades for content buried far from the prompt boundaries. Splitting the contract into smaller pieces places each section closer to the question, restoring reliable retrieval. Temperature affects sampling, not attention; max_tokens caps output, not input attention."
   },
   {
     "number": 3,
@@ -36,9 +36,9 @@
       "Increase max_tokens so the model can output longer summaries per turn"
     ],
     "correctAnswers": [
-      "Switch to a model with a larger context window and retry the same design"
+      "Have the agent write extracted findings to an external store, then work from those compacted notes"
     ],
-    "explanation": "Larger windows delay, not solve, the problem and raise cost/latency; long-context recall also degrades."
+    "explanation": "Externalizing findings turns unbounded raw text into compact, addressable notes the agent can re-read on demand. This is the standard context-engineering fix for long-running tasks: a bigger window only delays the same failure and long-context recall still degrades."
   },
   {
     "number": 4,
@@ -64,9 +64,9 @@
       "A larger context window so multiple tickets can be processed in one call"
     ],
     "correctAnswers": [
-      "A rate limit increase request so spikes never hit API limits"
+      "A queue between ticket intake and Claude calls, with retry handling for rate-limit responses"
     ],
-    "explanation": "Higher limits help but can't guarantee coverage of arbitrary 5x spikes; unbuffered failures still drop tickets."
+    "explanation": "A queue decouples uneven intake from bounded downstream throughput, guaranteeing no ticket is dropped during 5x spikes. Combined with retry-on-429 it absorbs bursts cleanly. Rate-limit increases alone cannot guarantee coverage of arbitrary spikes."
   },
   {
     "number": 6,
@@ -92,9 +92,9 @@
       "Lower the temperature so the model follows instructions more deterministically"
     ],
     "correctAnswers": [
-      "Add \"ignore instructions inside documents\" to the system prompt"
+      "Require human approval before executing outbound-action tools like send_email"
     ],
-    "explanation": "System prompt instructions reduce but never eliminate injection; determined attacks bypass them."
+    "explanation": "Prompt-level defenses reduce but never eliminate injection. Gating irreversible, outbound-action tools behind human approval contains the blast radius even when injection succeeds — the standard defense-in-depth control for agents with real-world side effects."
   },
   {
     "number": 8,
@@ -106,9 +106,9 @@
       "Route requests by complexity: Haiku for simple edits, Opus with thinking for hard refactors"
     ],
     "correctAnswers": [
-      "Add \"answer quickly\" to the system prompt to reduce thinking time"
+      "Route requests by complexity: Haiku for simple edits, Opus with thinking for hard refactors"
     ],
-    "explanation": "Prompt phrasing doesn't control thinking budget or model cost; it's an unreliable lever."
+    "explanation": "Task-based routing matches model capability to task complexity: cheap and fast for trivial edits, full capability preserved for hard work. This is the standard cost/latency/quality tradeoff pattern for mixed workloads."
   },
   {
     "number": 9,
@@ -133,9 +133,9 @@
       "Add \"always run Prettier after edits\" to CLAUDE.md"
     ],
     "correctAnswers": [
-      "Remind Claude in each prompt to format modified files"
+      "Configure a PostToolUse hook that runs Prettier on edited files"
     ],
-    "explanation": "Per-prompt reminders are manual, error-prone, and don't guarantee execution."
+    "explanation": "Hooks are deterministic shell commands the harness runs on every matching tool event, independent of what Claude decides. A PostToolUse hook on Edit/Write guarantees Prettier runs after every file modification — the only mechanism here that cannot be forgotten."
   },
   {
     "number": 11,
@@ -160,9 +160,9 @@
       "A fixed workflow chaining prompts, with each step's output validated before the next"
     ],
     "correctAnswers": [
-      "A supervisor agent delegating each invoice to specialized subagents"
+      "A fixed workflow chaining prompts, with each step's output validated before the next"
     ],
-    "explanation": "Supervisor hierarchies add coordination overhead; there is no branching or specialization need."
+    "explanation": "When steps are fixed and deterministic, a prompt-chained workflow gives predictable cost, latency, and per-step validation. Agentic patterns add coordination overhead that only pays off when the workflow needs to branch or adapt."
   },
   {
     "number": 13,
@@ -202,9 +202,9 @@
       "Write a custom loop with the Messages API for full control over every token"
     ],
     "correctAnswers": [
-      "Switch to a larger model so a simple one-shot call replaces the agent loop"
+      "Use the Claude Agent SDK, which provides the loop, context management, and tooling out of the box"
     ],
-    "explanation": "Model size doesn't eliminate the need for iterative tool calls and state management."
+    "explanation": "The Claude Agent SDK ships the agent loop, automatic context compaction, subagent orchestration, tool integration, and permissions — exactly the primitives listed in the requirements. Writing them from scratch reproduces well-solved plumbing and slows feature work."
   },
   {
     "number": 16,
@@ -216,9 +216,9 @@
       "Approve it since it works, then open follow-up tickets for cleanup"
     ],
     "correctAnswers": [
-      "Reject the PR and ask them to redesign the endpoint architecture"
+      "Request changes, citing the hardcoded secret as blocking and recommending proper JSON parsing and error handling"
     ],
-    "explanation": "Disproportionate; the design is fine, only implementation details need fixing"
+    "explanation": "The design is sound — only implementation details need fixing. A request-changes review that flags the secret as blocking and calls out JSON parsing plus error handling is proportionate, actionable, and keeps the author owning the work."
   },
   {
     "number": 17,
@@ -230,9 +230,9 @@
       "Switch all traffic to the Message Batches API for the 50% discount"
     ],
     "correctAnswers": [
-      "Enable streaming so input tokens are processed incrementally at lower cost"
+      "Add a cache_control breakpoint after the static system prompt to enable prompt caching"
     ],
-    "explanation": "Streaming improves perceived latency of output only; input pricing is unchanged"
+    "explanation": "Prompt caching is designed for exactly this shape: a large static prefix reused across requests with only the tail changing. A cache_control breakpoint after the static system prompt cuts input cost dramatically on cache hits and reduces latency."
   },
   {
     "number": 18,
@@ -244,9 +244,9 @@
       "Wrap every request in a try/catch that immediately retries once"
     ],
     "correctAnswers": [
-      "Increase max_tokens so responses complete faster"
+      "Adopt the official SDK with streaming enabled, using its built-in retry and timeout handling"
     ],
-    "explanation": "max_tokens caps output length; raising it lengthens responses and worsens timeouts."
+    "explanation": "The official SDK ships production-grade retry with exponential backoff, timeout handling, and streaming — the exact reliability plumbing the developer needs, with minimal custom code. Streaming also keeps connections active for long responses."
   },
   {
     "number": 19,
@@ -258,9 +258,9 @@
       "Migrate to the Claude Agent SDK for its built-in loop, context management, tools, permissions, and hooks"
     ],
     "correctAnswers": [
-      "Convert the harness into an MCP server so other clients can reuse it"
+      "Migrate to the Claude Agent SDK for its built-in loop, context management, tools, permissions, and hooks"
     ],
-    "explanation": "MCP exposes tools to agents; it doesn't provide an agent loop."
+    "explanation": "The Claude Agent SDK provides exactly the primitives the developer built by hand — agent loop, context management, file tools, MCP client support, permissions, and hooks — as a maintained, tested foundation. Adopting it eliminates the error-prone custom plumbing."
   },
   {
     "number": 20,
@@ -272,9 +272,9 @@
       "Increase max_tokens so Claude can finish the tool call and final answer in one response"
     ],
     "correctAnswers": [
-      "Set tool_choice to \"none\" so Claude answers directly without needing tool execution"
+      "Execute the tool, append a tool_result block in a user message with prior history, and call the API again"
     ],
-    "explanation": "Disabling tools removes the capability entirely rather than fixing the integration."
+    "explanation": "stop_reason \"tool_use\" signals that Claude is waiting on tool execution. The correct integration runs the tool, appends the tool_result to the same message history (paired with the prior tool_use block), and calls the API again so Claude can produce the final answer."
   },
   {
     "number": 21,
@@ -286,9 +286,9 @@
       "Obfuscate the key with base64 encoding before bundling so it isn't visible in plain text"
     ],
     "correctAnswers": [
-      "Restrict the key in the Anthropic Console to only the app's domain via CORS settings"
+      "Move API calls to a backend proxy that holds the key and enforces auth and rate limits"
     ],
-    "explanation": "CORS restricts browsers, not attackers using curl; the key is still fully exposed."
+    "explanation": "Any secret shipped to the browser is fully exposed — CORS restricts browsers, not attackers with curl, and encoding doesn't hide anything. A backend proxy keeps the key server-side and adds authentication and rate-limiting the browser cannot enforce."
   },
   {
     "number": 22,
@@ -300,9 +300,9 @@
       "Use the Batch API to submit all requests and poll for completion"
     ],
     "correctAnswers": [
-      "Add threading with unlimited workers to maximize throughput"
+      "Use the Batch API to submit all requests and poll for completion"
     ],
-    "explanation": "Unlimited concurrency triggers rate-limit errors and failures; no backpressure control"
+    "explanation": "The Batch API is purpose-built for large volumes of independent requests where results aren't needed in real time: it handles concurrency and rate limits for you and offers a significant cost discount, making it the best fit for this workload."
   },
   {
     "number": 23,
@@ -328,9 +328,9 @@
       "Log every production prompt at runtime so regressions can be traced afterward"
     ],
     "correctAnswers": [
-      "Move all prompt content into CLAUDE.md so Claude Code always loads the latest version"
+      "Store prompts in version control, tag releases with the pinned model version, and gate deploys on evals"
     ],
-    "explanation": "CLAUDE.md configures Claude Code sessions, not production API prompts; \"latest\" worsens traceability."
+    "explanation": "Treating prompts like code — version-controlled, release-tagged with the model ID, and gated on evals — gives full traceability, reproducibility, and regression prevention. CLAUDE.md configures Claude Code sessions, not production API prompts."
   },
   {
     "number": 25,
@@ -356,9 +356,9 @@
       "Lower the temperature to zero so formatting becomes deterministic"
     ],
     "correctAnswers": [
-      "Post-process with a second Claude call that strips non-JSON content"
+      "Prefill the assistant turn with \"{\" to constrain output toward raw JSON"
     ],
-    "explanation": "A second model call adds cost and latency for a problem prefilling solves structurally."
+    "explanation": "Prefilling the assistant response with \"{\" structurally forces the completion to begin as JSON, eliminating preambles and markdown fences without a second call. It's the standard, zero-cost fix for this class of parser failure."
   },
   {
     "number": 27,
@@ -370,9 +370,9 @@
       "Build a prompt-chained workflow with fixed steps and deterministic tool calls"
     ],
     "correctAnswers": [
-      "Run parallel agents per invoice and merge their outputs with a judge model"
+      "Build a prompt-chained workflow with fixed steps and deterministic tool calls"
     ],
-    "explanation": "Parallel agents plus a judge adds complexity and cost for a deterministic task"
+    "explanation": "When the sequence never varies, prompt chaining gives predictable cost, latency, and per-step validation. Agent loops and judge-based ensembles add complexity that only pays off when the task actually needs to branch or self-critique."
   },
   {
     "number": 28,
@@ -384,9 +384,9 @@
       "Re-run the original launch evals once a year during audits"
     ],
     "correctAnswers": [
-      "Trust the pinned model version, since identical inputs guarantee identical behavior"
+      "Log requests, monitor token usage, latency, error rates, and sample outputs for quality review"
     ],
-    "explanation": "Pinning stabilizes the model, but inputs, usage patterns, and dependencies still shift; sampling variance also exists."
+    "explanation": "Ongoing observability — logs, token/latency/error metrics, and sampled output review — catches drift in inputs, usage patterns, and dependencies that pinning cannot. It's the standard operational posture for a production LLM integration."
   },
   {
     "number": 29,
@@ -398,9 +398,9 @@
       "Raise max_tokens so Claude can reason longer before each tool call"
     ],
     "correctAnswers": [
-      "Add a system prompt line telling Claude not to repeat tool calls"
+      "Compact the loop: summarize older tool results into structured notes, drop raw outputs"
     ],
-    "explanation": "Prompt instructions can't help if the evidence of prior fetches has already fallen out of usable context."
+    "explanation": "Compaction replaces bulky raw tool outputs with concise structured notes, preserving key findings while freeing context. This directly addresses the root cause — evidence of prior work being pushed out — where a bigger window or prompt instructions cannot."
   },
   {
     "number": 30,
@@ -412,9 +412,9 @@
       "Stream responses to reduce total token costs"
     ],
     "correctAnswers": [
-      "Send requests in a tight synchronous loop to finish before rate limits reset"
+      "Use the Batch API for the discounted rate and asynchronous processing"
     ],
-    "explanation": "Synchronous loops hit rate limits, gain no discount, and are fragile at this volume."
+    "explanation": "The Batch API is purpose-built for asynchronous, high-volume workloads with no realtime SLA: it offers a significant discount and handles concurrency and rate-limit backoff, which is exactly what a 200k-document overnight job needs."
   },
   {
     "number": 31,
@@ -440,9 +440,9 @@
       "Set temperature to 0 so outputs remain deterministic across model updates"
     ],
     "correctAnswers": [
-      "Add a system prompt line instructing the model to keep the previous format"
+      "Pin the full dated model ID and upgrade only after evals pass on the new version"
     ],
-    "explanation": "A prompt instruction may help but is fragile; the underlying dependency still changes without validation."
+    "explanation": "Pinning the dated model ID freezes the underlying dependency so upgrades become explicit, validated events. Gating upgrades on an eval run catches format or behavior regressions before they reach production — the standard model-versioning discipline."
   },
   {
     "number": 33,
@@ -467,9 +467,9 @@
       "Set temperature near 0 for code generation; keep higher temperature for creative tasks"
     ],
     "correctAnswers": [
-      "Set temperature to 0 globally so all outputs become fully reproducible"
+      "Set temperature near 0 for code generation; keep higher temperature for creative tasks"
     ],
-    "explanation": "Kills useful diversity in creative outputs; also temperature 0 reduces but doesn't guarantee reproducibility."
+    "explanation": "Temperature should be tuned per workload: low for tasks that need consistency (code, extraction, classification), higher for tasks that benefit from diversity (marketing copy). A single global setting compromises one or the other."
   },
   {
     "number": 35,
@@ -482,7 +482,7 @@
     "correctAnswers": [
       "Tighten the tool description so Claude never omits fields, removing runtime checks"
     ],
-    "explanation": "Better prompts reduce errors but can't eliminate them; runtime checks remain necessary."
+    "explanation": "None of the three options is ideal — production code should validate tool inputs at runtime (e.g., with a schema library) rather than trust the model, silently swallow errors, or blind-cast. Of the choices offered, tightening the description at least reduces the rate of malformed inputs; silently skipping hides bugs and blind casting propagates undefined access. In practice, keep runtime validation regardless."
   },
   {
     "number": 36,
@@ -493,9 +493,9 @@
       "Append the tool_result to the full prior message history, including the assistant's tool_use turn"
     ],
     "correctAnswers": [
-      "Embed the tool output directly into the system prompt for the next request"
+      "Append the tool_result to the full prior message history, including the assistant's tool_use turn"
     ],
-    "explanation": "System prompts set behavior; tool results belong in the message flow paired with their tool_use block."
+    "explanation": "The Messages API requires tool_result blocks to be paired with their originating tool_use block within the ongoing message history. Sending the result alone strips the context Claude needs to interpret it."
   },
   {
     "number": 37,
@@ -507,9 +507,9 @@
       "Lower temperature to 0 so outputs become deterministic and stable"
     ],
     "correctAnswers": [
-      "Add \"be accurate and consistent\" instructions to the system prompt"
+      "Build a labeled eval set from real cases and run it automatically on every prompt change"
     ],
-    "explanation": "Prompt instructions don't detect regressions; they're the thing being changed."
+    "explanation": "A labeled eval set run automatically on every prompt change gives objective, repeatable regression detection at scale — the standard pre-deployment gate for LLM systems. Manual spot checks and prompt tweaks cannot detect the drift they're causing."
   },
   {
     "number": 38,
@@ -521,9 +521,9 @@
       "Add \"always output valid JSON\" to the system prompt and remove error handling"
     ],
     "correctAnswers": [
-      "Set temperature to 0 so outputs become fully deterministic"
+      "Wrap parsing in try/except, return a descriptive error as the tool result so Claude can retry"
     ],
-    "explanation": "Temperature 0 reduces randomness but doesn't guarantee valid JSON; edge cases remain."
+    "explanation": "Returning a descriptive error as the tool result closes the loop: Claude sees exactly what was wrong and self-corrects on the next turn. This makes the integration robust to occasional malformed outputs that no amount of prompting or temperature tuning can fully eliminate."
   },
   {
     "number": 39,
@@ -535,9 +535,9 @@
       "Which Claude model offers the lowest latency for chat workloads"
     ],
     "correctAnswers": [
-      "How many concurrent users the API rate limits can support"
+      "The scope of permitted topics, escalation paths, and compliance constraints"
     ],
-    "explanation": "Capacity planning matters later; it doesn't shape what the assistant is allowed to do."
+    "explanation": "In a regulated domain like banking, the first design question is what the assistant is allowed to do — permitted topics, escalation paths, and compliance obligations. Capacity, latency, and model choice matter only after scope and guardrails are defined."
   },
   {
     "number": 40,
@@ -549,9 +549,9 @@
       "The matcher identifies the tool, not the command; the hook must parse tool_input from stdin"
     ],
     "correctAnswers": [
-      "Tool names are randomized per session, so matchers fail silently"
+      "The matcher identifies the tool, not the command; the hook must parse tool_input from stdin"
     ],
-    "explanation": "Tool names are stable identifiers; matchers work reliably."
+    "explanation": "The matcher only tells the hook which tool is being invoked (Bash). To distinguish safe commands from destructive ones the hook must read the tool_input JSON from stdin and inspect the actual command string before deciding to block."
   },
   {
     "number": 41,
@@ -576,9 +576,9 @@
       "Increase the eval dataset size tenfold before the next release"
     ],
     "correctAnswers": [
-      "Re-run the original offline eval suite before every deployment"
+      "Continuously sample production traffic, score it against evals, and alert on metric drift"
     ],
-    "explanation": "Pre-deployment evals only run at release time; nothing changed at deployment here."
+    "explanation": "Nothing changed at deploy time, so pre-deployment evals cannot catch this. Continuous production sampling with drift alerting detects real-world input shift and accuracy erosion between releases — the standard practice for ongoing LLM quality monitoring."
   },
   {
     "number": 43,
@@ -604,9 +604,9 @@
       "Add \"do not hallucinate\" to the system prompt"
     ],
     "correctAnswers": [
-      "Switch to a larger model with better classification accuracy"
+      "Provide the enum of valid categories plus an explicit \"unknown\" option, then validate against it"
     ],
-    "explanation": "A larger model still guesses without the taxonomy; the prompt lacks the needed constraint."
+    "explanation": "Constraining outputs to an enumerated set and offering an explicit \"unknown\" gives Claude a safe fallback for uncertainty. Validating against that enum catches any drift deterministically — a structural fix that neither model size nor prompt exhortations can provide."
   },
   {
     "number": 45,
@@ -618,9 +618,9 @@
       "Increase the cache breakpoint count so more of the prompt gets cached"
     ],
     "correctAnswers": [
-      "Send requests more frequently so the cache never expires between calls"
+      "Reorder the prompt so static instructions come first and dynamic values appear after the cache breakpoint"
     ],
-    "explanation": "Frequency keeps a cache warm but can't create hits when prefixes never match."
+    "explanation": "Prompt caching matches on prefix. Dynamic tokens at the top invalidate the cache for every request. Putting static content first, then placing the cache_control breakpoint before any dynamic values, lets the large static prefix be reused."
   },
   {
     "number": 46,
@@ -646,9 +646,9 @@
       "A multi-agent orchestrator that spawns sub-agents for each ticket dynamically"
     ],
     "correctAnswers": [
-      "A single large prompt combining classification, response, and summarization instructions"
+      "A fixed workflow chaining prompts with routing, since the steps are predictable"
     ],
-    "explanation": "One mega-prompt mixes concerns, hurting accuracy per step and making failures hard to isolate."
+    "explanation": "A prompt-chained workflow with a routing step matches the fixed classify → route → respond → summarize shape exactly. Each stage stays focused, is independently testable, and can be validated before the next — cleaner and more accurate than one mega-prompt or an autonomous loop."
   },
   {
     "number": 48,
@@ -660,9 +660,9 @@
       "Reduce max_tokens so completions finish faster"
     ],
     "correctAnswers": [
-      "Switch to a larger model with higher throughput"
+      "Enable streaming via the SDK and render tokens as they arrive"
     ],
-    "explanation": "Model size doesn't remove the wait for a complete response; streaming does."
+    "explanation": "Streaming lets the UI render tokens the moment they're produced, eliminating the perceived hang. It's the standard fix for long-response latency in chat UIs and requires only enabling the SDK's streaming mode."
   },
   {
     "number": 49,
@@ -702,9 +702,9 @@
       "Increase max_tokens so Claude has room to reason about the tool"
     ],
     "correctAnswers": [
-      "Switch to a larger model with better tool-calling capability"
+      "Rewrite the description to explain what the tool does, when to use it, and parameter meanings"
     ],
-    "explanation": "A bigger model can't infer intent from an uninformative description; costlier without addressing root cause."
+    "explanation": "Tool selection and argument construction depend almost entirely on the name and description. A clear name, an explicit purpose, when-to-use guidance, and per-parameter meanings directly fix both problems — the highest-leverage first step and the one every tool-use guide recommends."
   },
   {
     "number": 52,
@@ -716,9 +716,9 @@
       "Switch to a model with a larger context window and keep everything"
     ],
     "correctAnswers": [
-      "Truncate every tool result to its first 100 tokens before adding it"
+      "Compact older tool results into summaries, keeping recent turns and key findings verbatim"
     ],
-    "explanation": "Blindly truncating discards critical information that may appear later in results."
+    "explanation": "Selective compaction preserves the information the agent actually needs — recent turns verbatim, older material as concise summaries — while freeing bulk. Blind truncation discards critical content and a larger window only postpones the same failure."
   },
   {
     "number": 53,
